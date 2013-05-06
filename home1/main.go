@@ -6,17 +6,17 @@ import "log"
 import "fmt"
 import "sort"
 
-type WG [][]byte
+type weighted_guesses [][]byte
 
-func (wg WG) Len() int {
+func (wg weighted_guesses) Len() int {
 	return len(wg)
 }
 
-func (wg WG) Less(i, j int) bool {
+func (wg weighted_guesses) Less(i, j int) bool {
 	return wg[j][1] < wg[i][1]
 }
 
-func (wg WG) Swap(i, j int) {
+func (wg weighted_guesses) Swap(i, j int) {
 	wg[i], wg[j] = wg[j], wg[i]
 }
 
@@ -31,10 +31,24 @@ func main() {
 		"315c4eeaa8b5f8bffd11155ea506b56041c6a00c8a08854dd21a4bbde54ce56801d943ba708b8a3574f40c00fff9e00fa1439fd0654327a3bfc860b92f89ee04132ecb9298f5fd2d5e4b45e40ecc3b9d59e9417df7c95bba410e9aa2ca24c5474da2f276baa3ac325918b2daada43d6712150441c2e04f6565517f317da9d3",
 		"271946f9bbb2aeadec111841a81abc300ecaa01bd8069d5cc91005e9fe4aad6e04d513e96d99de2569bc5e50eeeca709b50a8a987f4264edb6896fb537d0a716132ddc938fb0f836480e06ed0fcd6e9759f40462f9cf57f4564186a2c1778f1543efa270bda5e933421cbe88a4a52222190f471e9bd15f652b653b7071aec59a2705081ffe72651d08f822c9ed6d76e48b63ab15d0208573a7eef027",
 		"466d06ece998b7a2fb1d464fed2ced7641ddaa3cc31c9941cf110abbf409ed39598005b3399ccfafb61d0315fca0a314be138a9f32503bedac8067f03adbf3575c3b8edc9ba7f537530541ab0f9f3cd04ff50d66f1d559ba520e89a2cb2a83",
-		"32510ba9babebbbefd001547a810e67149caee11d945cd7fc81a05e9f85aac650e9052ba6a8cd8257bf14d13e6f0a803b54fde9e77472dbff89d71b57bddef121336cb85ccb8f3315f4b52e301d16e9f52f904"}
+		"32510ba9babebbbefd001547a810e67149caee11d945cd7fc81a05e9f85aac650e9052ba6a8cd8257bf14d13e6f0a803b54fde9e77472dbff89d71b57bddef121336cb85ccb8f3315f4b52e301d16e9f52f904",
+	}
 
-	bciphers := make([][]byte, 11)
+	bciphers := make([][]byte, len(ciphers))
+	for i, cipher := range ciphers {
+		bcipher, err := hex.DecodeString(cipher)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bciphers[i] = bcipher
+	}
 
+	key := guess_key(bciphers)
+
+	fmt.Println(string(xor(bciphers[len(bciphers)-1], key)))
+}
+
+func guess_key(ciphers [][]byte) []byte {
 	max_len := 0
 	for _, c := range ciphers {
 		ln := len(c)
@@ -43,36 +57,28 @@ func main() {
 		}
 	}
 
-	fmt.Println(max_len)
-	guess := make([][]byte, max_len)
+	guesses := make([][]byte, max_len)
 	for i := 0; i < max_len; i++ {
-		guess[i] = make([]byte, 256)
+		guesses[i] = make([]byte, 256)
 	}
 
-	for i, cipher := range ciphers {
-		bcipher, err := hex.DecodeString(cipher)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		bciphers[i] = bcipher
+	for i := 1; i < len(ciphers); i++ {
 		for k := 0; k < i; k++ {
-			x := xor(bciphers[k], bcipher)
-			fmt.Printf("XOR (%d:%d): (%x)\n\n", i, k, x)
+			x := xor(ciphers[k], ciphers[i])
 
 			for l, b := range x {
-				if (b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x72) {
-					guess[l][bcipher[l]^0x20] += 1
-					guess[l][bciphers[k][l]^0x20] += 1
+				if (b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x7a) {
+					guesses[l][ciphers[i][l]^0x20] += 1
+					guesses[l][ciphers[k][l]^0x20] += 1
 				}
 			}
 		}
 	}
 
-	fguess := make([]WG, max_len)
-	for i, ge := range guess {
-		fguess[i] = make(WG, 0)
-		for k, w := range ge {
+	fguess := make([]weighted_guesses, max_len)
+	for i, guess := range guesses {
+		fguess[i] = make(weighted_guesses, 0)
+		for k, w := range guess {
 			if w != 0 {
 				fguess[i] = append(fguess[i], []byte{byte(k), w})
 			}
@@ -83,17 +89,12 @@ func main() {
 
 	key := make([]byte, max_len)
 	for pos, c := range fguess {
-		if len(c) > 0 {
+		if len(c) > 0 && len(c[0]) > 0 {
 			key[pos] = c[0][0]
-			fmt.Print("Position: ", pos, " -")
-			for _, g := range c {
-				fmt.Printf(" %x,", g[0])
-			}
-			println()
 		}
 	}
 
-	fmt.Printf("Key: %x", key)
+	return key
 }
 
 func xor(left, right []byte) []byte {
