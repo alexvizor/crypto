@@ -1,9 +1,6 @@
 package main
 
-//import "log"
 import "fmt"
-
-//import "math"
 import "math/big"
 import "github.com/cznic/mathutil"
 
