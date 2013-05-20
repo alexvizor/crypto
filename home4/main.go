@@ -25,13 +25,14 @@ func main() {
 	result := make([]byte, sln-BLOCK_SIZE)
 	log.Println("Start guessing")
 
-	chns, schn := make([]chan []byte, sln/BLOCK_SIZE), make(chan int)
+	chns, schn, chunks := make([]chan []byte, sln/BLOCK_SIZE), make(chan int), 0
 	for bt := 1; bt < sln/BLOCK_SIZE; bt++ {
 		chns[bt-1] = make(chan []byte)
 		go oracle(schn, chns[bt-1], secret[:BLOCK_SIZE*(bt+1)])
+		chunks += 1
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < chunks; i++ {
 		bt := (<-schn) - 1
 		result = append(result[:bt*BLOCK_SIZE], append(<-chns[bt], result[(bt+1)*BLOCK_SIZE:]...)...)
 	}
