@@ -1,16 +1,22 @@
 package main
 
+import "os"
 import "log"
 import "fmt"
+import "strings"
 import "net/http"
 import "encoding/hex"
+import "io/ioutil"
 
-var base_url = "http://crypto-class.appspot.com/po?er="
-
+const base_url = "http://crypto-class.appspot.com/po?er="
 const BLOCK_SIZE = 16
 
 func main() {
-	secret, err := hex.DecodeString("f20bdba6ff29eed7b046d1df9fb7000058b1ffb4210a580f748b4ac714c001bd4a61044426fb515dad3f21f18aa577c0bdf302936266926ff37dbf7035d5eeb4")
+	raw, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	secret, err := hex.DecodeString(strings.Trim(string(raw), " \n"))
 	if err != nil {
 		log.Fatal("Error while decoding secret")
 	}

@@ -1,12 +1,20 @@
 package main
 
-//import "log"
+import "log"
 import "fmt"
+import "os"
+import "io/ioutil"
+import "strings"
 import "math/big"
 import "github.com/cznic/mathutil"
 
 func main() {
-	N, _ := new(big.Int).SetString("179769313486231590772930519078902473361797697894230657273430081157732675805505620686985379449212982959585501387537164015710139858647833778606925583497541085196591615128057575940752635007475935288710823649949940771895617054361149474865046711015101563940680527540071584560878577663743040086340742855278549092581", 0)
+	raw, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	N, _ := new(big.Int).SetString(strings.Trim(string(raw), " \n"), 0)
 
 	A := mathutil.SqrtBig(N)
 	A.Add(A, big.NewInt(1))
